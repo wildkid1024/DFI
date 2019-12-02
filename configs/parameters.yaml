@@ -3,6 +3,7 @@ data:
   val_num: 10000
 
 train:
+  resume: False
   batch_size: 32
   learning_rate: 0.01
   epoches: 50

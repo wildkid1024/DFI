@@ -10,39 +10,41 @@ import torch
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
 
-from nn_models.lenet import LeNet
+# from nn_models.lenet import LeNet
 # from nn_models.alexnet import AlexNet
+import nn_models
 
 
 class ModelWrapper:
-    def __init__(self, criterion=torch.nn.CrossEntropyLoss(), cfg={}):
+    def __init__(self, net_name='LeNet', cfg={}):
         self.best_acc = 0  # best test accuracy
         self.start_epoch = 0  # start from epoch 0 or last checkpoint epoch
         self.lr = cfg['train']['learning_rate']
         self.pretrained_model = cfg['val']['pretrained_model']['CIFAR']
-        self.resume = False
+        self.resume = cfg['train']['resume']
 
         self.epoches = cfg['train']['epoches']
         self.iteration_num = cfg['val']['iteration_num']
 
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-        self._load()
+        self._load(net_name)
 
         if self.resume:
             self._resume()
 
-        self.criterion = criterion
+        self.criterion = torch.nn.CrossEntropyLoss()
         self.optimizer = optim.SGD(self.model.parameters(), lr=self.lr, momentum=0.9, weight_decay=5e-4)
 
-    def _load(self):
+    def _load(self, net_name):
         print("==> Using GPU") if self.device == 'cuda' else print("==> Using CPU")
         print('==> Preparing data..')
         from dataset.dataset import cifar10
         self.train_loader = cifar10.train_loader
         self.test_loader = cifar10.test_loader
         print('==> Building model..')
-        self.model = LeNet().to(self.device)
+        # self.model = LeNet().to(self.device)
+        self.model = nn_models.__dict__[net_name]().to(self.device)
         if self.device == 'cuda':
             self.model = torch.nn.DataParallel(self.model)
             cudnn.benchmark = True
@@ -112,6 +114,7 @@ class ModelWrapper:
         train_loss = 0
         correct = 0
         total = 0
+        log_batch = 10
         for batch_idx, (inputs, targets) in enumerate(self.train_loader):
             inputs, targets = inputs.to(self.device), targets.to(self.device)
             self.optimizer.zero_grad()
@@ -126,9 +129,9 @@ class ModelWrapper:
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
 
-            if total == 73257:
-                print('Train Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                      % (train_loss / (batch_idx + 1), 100. * correct / total, correct, total))
+            if batch_idx % log_batch == 0:
+                print('Epoch %d | Batch %d | Train Loss: %.3f | Acc: %.3f%% (%d/%d)'
+                      % (epoch, batch_idx, train_loss / (batch_idx + 1), 100. * correct / total, correct, total))
 
     def train(self):
         for epoch in range(self.epoches):

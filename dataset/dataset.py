@@ -16,7 +16,7 @@ from hyper_parameters import batch_size
 
 Dataset = collections.namedtuple('Dataset', 'train_loader,test_loader,classes')
 
-data_root = './'
+data_root = './dataset/'
 
 # -------------------- MNIST dataset --------------------------------------------
 mnist_batch_size = batch_size
