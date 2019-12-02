@@ -1,0 +1,18 @@
+data:
+  train_num: 50000
+  val_num: 10000
+
+train:
+  batch_size: 32
+  learning_rate: 0.01
+  epoches: 50
+
+val:
+  pretrained_model:
+    MNIST: './nn_models/pretrained/lenet_mnist.pkl'
+    FMIST: './nn_models/pretrained/lenet_fashionmnist.pkl'
+    SVHN: './nn_models/pretrained/lenet_svhn.pkl'
+    CIFAR: './nn_models/pretrained/lenet_cifar.pkl'
+
+  inject_times: 5
+  iteration_num: 10
