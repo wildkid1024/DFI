@@ -42,5 +42,12 @@ def get_weights():
     net.weights_export()
 
 
+def summary():
+    config = get_para()
+    net = ModelWrapper(cfg=config)
+    net.verify()
+    net.summary()
+
+
 if __name__ == '__main__':
-    get_weights()
+    summary()

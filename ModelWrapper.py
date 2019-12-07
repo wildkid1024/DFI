@@ -10,8 +10,7 @@ import torch
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
 
-# from nn_models.lenet import LeNet
-# from nn_models.alexnet import AlexNet
+from libs.net_measure import measure_model
 import nn_models
 
 
@@ -188,8 +187,6 @@ class ModelWrapper:
 
     def weights_export(self, save_path='weights'):
         import scipy.io as scio
-        if not self.model:
-            raise ("")
 
         weights = {}
         for k, v in self.model.named_parameters():
@@ -199,3 +196,22 @@ class ModelWrapper:
 
     def feature_map(self):
         pass
+
+    def summary(self):
+        x = torch.zeros(10, 3, 32, 32).to(self.device)
+        summ_dict = measure_model(self.model, x)
+
+        total_ops = 0
+        total_parms = 0
+        print('-' * 80)
+        print('Layer\t\t    Type\t\t    Param #\t\t   FlOPS #')
+        print('=' * 80)
+        for idx, layer_name in enumerate(summ_dict):
+            total_ops += summ_dict[layer_name][0]
+            total_parms += summ_dict[layer_name][1]
+            type_name = layer_name[:layer_name.find('(')].strip()
+            print("%-5d%s%-20d%-20d" % (idx + 1, type_name.center(25, ' '), summ_dict[layer_name][0], summ_dict[layer_name][1]))
+        print('=' * 80)
+        print("Trainable FLOPs: %.2f M" % (total_ops / 1e6))
+        print("Total params: %.2f M" % (total_parms / 1e6))
+        print('-' * 80)
