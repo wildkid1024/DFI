@@ -9,14 +9,14 @@ import torch
 import torchvision
 import torchvision.datasets as datasets
 
-
 def load_data(dataset_name, batch_size=32, transform=torchvision.transforms.ToTensor()):
+    dataset_name = dataset_name.upper()
     dataset_dict = {'CIFAR10': datasets.CIFAR10,
                     'FMNIST': datasets.FashionMNIST,
                     'MNIST': datasets.MNIST,
                     'SVHN': datasets.SVHN
                     }
-    data_dir = './dataset' + dataset_name
+    data_dir = './dataset/' + dataset_name
 
     if dataset_name == 'SVHN':
         train_dataset = dataset_dict[dataset_name](root=data_dir, split='train', transform=transform)

@@ -11,15 +11,14 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from thop import profile
-from ModelWrapper import ModelWrapper
+from ModelWrapper import *
 
 from functions import get_para
 
 
 def train_test():
-    config = get_para()
-    net = ModelWrapper(cfg=config)
+    Conf.load()
+    net = ModelWrapper()
     net.train()
     _, acc = net.verify()
     print(acc)
@@ -50,4 +49,4 @@ def summary():
 
 
 if __name__ == '__main__':
-    summary()
+    train_test()

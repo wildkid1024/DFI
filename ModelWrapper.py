@@ -11,39 +11,75 @@ import torch.backends.cudnn as cudnn
 import torch.optim as optim
 
 from libs.net_measure import measure_model
+from libs.config import Conf
+from dataset.utils import load_data
 import nn_models
 
 
 class ModelWrapper:
-    def __init__(self, net_name='LeNet', cfg={}):
+    def __init__(self, net_name='LeNet', dataset_name='cifar10'):
         self.best_acc = 0  # best test accuracy
         self.start_epoch = 0  # start from epoch 0 or last checkpoint epoch
-        self.lr = cfg['train']['learning_rate']
-        self.pretrained_model = cfg['val']['pretrained_model']['CIFAR']
-        self.resume = cfg['train']['resume']
+        # self.lr = cfg['train']['learning_rate']
+        self.lr = Conf.get('train.learning_rate')
+        self.l2 = Conf.get('train.l2')
+        
+        self.pretrained_model = Conf.get('val.pretrained_model.CIFAR')
+        self.resume = Conf.get('train.resume')
+        # self.pretrained_model = cfg['val']['pretrained_model']['CIFAR']
+        # self.resume = cfg['train']['resume']
 
-        self.epoches = cfg['train']['epoches']
-        self.iteration_num = cfg['val']['iteration_num']
+        self.epoches = Conf.get('train.epochs')
+        self.iteration_num = Conf.get('val.iteration_num')
+        # self.epoches = cfg['train']['epoches']
+        # self.iteration_num = cfg['val']['iteration_num']
 
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-        self._load(net_name)
+        self._load(net_name, dataset_name)
 
         if self.resume:
             self._resume()
 
-        self.criterion = torch.nn.CrossEntropyLoss()
-        self.optimizer = optim.SGD(self.model.parameters(), lr=self.lr, momentum=0.9, weight_decay=5e-4)
+        self.set_optimizer()
+    
+    def set_device(self, device):
+        self.device = device
 
-    def _load(self, net_name):
+    def get_device(self):
+        return self.device
+    
+    def set_optimizer(self, loss='categorical_crossentropy', optimizer='adadelta', metrics=None):
+        if loss == 'categorical_crossentropy':
+            self.criterion = nn.CrossEntropyLoss()
+        elif loss == 'binary_crossentropy':
+            self.criterion = nn.BCELoss()
+
+        if optimizer == 'adadelta':
+            self.optimizer = optim.Adadelta(self.model.parameters(), weight_decay=self.l2)
+        elif optimizer == 'rms':
+            self.optimizer = optim.RMSprop(self.model.parameters(), lr = self.lr, weight_decay=self.l2)
+        elif optimizer == 'sgd':
+            self.optimizer = optim.SGD(self.model.parameters(), lr = self.lr, weight_decay = self.l2, momentum=0.9, nesterov=True)
+        elif optimizer == 'adam':
+            self.optimizer = optim.Adam(self.model.parameters(), lr = self.lr, weight_decay = self.l2)
+        
+        if metrics is None:
+            self.metrics=['accuracy']
+        else:
+            self.metrics = metrics
+
+    def _load(self, net, dataset_name):
         print("==> Using GPU") if self.device == 'cuda' else print("==> Using CPU")
         print('==> Preparing data..')
-        from dataset.dataset import cifar10
-        self.train_loader = cifar10.train_loader
-        self.test_loader = cifar10.test_loader
+        # print(dataset.__dict__)
+        # data = dataset.__dict__[dataset_name]
+        # self.train_loader = data.train_loader
+        # self.test_loader = data.test_loader
+        self.train_loader, self.test_loader = load_data(dataset_name)
         print('==> Building model..')
         # self.model = LeNet().to(self.device)
-        self.model = nn_models.__dict__[net_name]().to(self.device)
+        self.model = nn_models.__dict__[net]().to(self.device)
         if self.device == 'cuda':
             self.model = torch.nn.DataParallel(self.model)
             cudnn.benchmark = True
@@ -196,6 +232,9 @@ class ModelWrapper:
 
     def feature_map(self):
         pass
+
+    def register_hook(self, hook, module_ind):
+        list(self.model.modules())[module_ind].register_forward_hook(hook)
 
     def summary(self):
         x = torch.zeros(10, 3, 32, 32).to(self.device)

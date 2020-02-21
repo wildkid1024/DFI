@@ -5,15 +5,18 @@
 # @Site    : 
 # @File    : train_cifar10.py
 # @Software: PyCharm
+import sys
+sys.path.append('.') 
+
 import torch
 import torch.nn as nn
-from ModelWrapper import ModelWrapper
+from ModelWrapper import *
 from functions import get_para
 
 
 def train_test():
-    config = get_para()
-    net = ModelWrapper(net_name='ResNet18', cfg=config)
+    Conf.load()
+    net = ModelWrapper(net_name='ResNet18')
     net.train()
     _, acc = net.verify()
     print(acc)

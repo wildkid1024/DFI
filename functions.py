@@ -63,3 +63,30 @@ def get_para(name=''):
     # for attr in attrs:
     #     data = data[attr]
     return data
+
+def cli():
+  # Default message.
+  parser = argparse.ArgumentParser(description='Bit level fault injection experiment', \
+                                        epilog='Configure your experiment from the command line.')
+
+  parser.add_argument('-m', '--model', required=True, type=str, \
+                       help='Pick a model to run. Models listed in models/model_config.py')
+
+  parser.add_argument('-lw', '--load_weights', action='store_true', help='Load saved weights from cache.')
+
+  parser.add_argument('-ld_name', '--weight_name', default=None, type=str, \
+                           help='Specifiy the weights to use.')
+
+  parser.add_argument('-qi', '--qi', default=2, type=int, help='Integer bits for quantization')
+  parser.add_argument('-qf', '--qf', default=6, type=int, help='Fractional bits for quantization')
+
+  parser.add_argument('-seed', '--seed', default=0xdeadbeef, type=int, help='Random seed for bit-level fault injector')
+  parser.add_argument('-frate', '--frate', default=0.0001, type=float, help='Fault Rate')
+
+  parser.add_argument('-c','--configuration', type=str, default=None, help='Specify a configuration file.')
+  parser.add_argument('-cache','--cache', type=str, default=None, help='Specify a cache dir.')
+  parser.add_argument('-results','--results', type=str, default=None, help='Specify results dir.')
+
+  args = parser.parse_args()
+
+  return args

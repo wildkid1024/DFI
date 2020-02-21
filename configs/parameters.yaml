@@ -6,7 +6,8 @@ train:
   resume: False
   batch_size: 32
   learning_rate: 0.01
-  epoches: 50
+  l2 : 0.00
+  epochs: 50
 
 val:
   pretrained_model:
