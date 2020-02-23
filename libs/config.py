@@ -50,9 +50,7 @@ class Conf(object):
   def get(cls, key):
     cls._validate(key)
     try:
-      v = cls._conf
-      attrs = key.split('.')
-      for attr in attrs: v = v[attr]
+      v = cls._conf[key]
     except KeyError:
       raise KeyError('\'%s\' not found in configuration file \'%s\'.'%(key,cls._path))
     return v
@@ -67,38 +65,31 @@ class Conf(object):
     cls._path = DEFULT_FILE
     if filename is not None:
       cls._path = filename
-    cls._conf = yaml.load(open(cls._path))
-    # cls._conf = json.load(open(filename))
+    tmp = yaml.load(open(cls._path))
+    def trans(vdict={}, name=''):
+      for k in vdict.keys():
+        key = name + '.' + k if len(name) > 0 else k
+        if not type(vdict[k]) is dict:
+          cls._conf.setdefault(key, vdict[k])
+        else: 
+          trans(vdict=vdict[k], name=key)
+    trans(vdict=tmp)
+    # cls._conf.update(tmp)
 
   @classmethod
   def save(cls, filename):
-    yaml.dump(cls._conf, open(filename,'w'), indent=2)
-    '''Looks in common locations for a ares configuration file.
+    save_dict = {}
+    for names,value in cls._conf.items():
+      ss = tmp
+      attrs = names.split(".")
+      for attr in attrs[:-1]:
+        if attr not in ss:
+          ss[attr] = {}
+        ss = ss[attr]
+      ss[attrs[-1]] = v
 
-    The location priority is:
-      - A provided filename
-      - Location given by a "DL_MODELS" environment variable.
-      - "ares.conf" in current directory.
-      - ".ares.conf" in home directory.
-    '''
+    yaml.dump(save_dict, open(filename,'w'), indent=2)
 
-    files_attempted = []
-
-    v = filename
-    files_attempted.append(v)
-    if v is not None and os.path.isfile(v):
-      return v
-    v = os.environ.get('DL_MODELS_CONF',None)
-    files_attempted.append('$WEIGHTLESS_CONF')
-    if v is not None and os.path.isfile(v):
-      return v
-    v = 'ares.conf'
-    files_attempted.append(v)
-    if v is not None and os.path.isfile(v):
-      return v
-    v = os.path.expanduser('.ares.conf')
-    files_attempted.append(v)
-    if v is not None and os.path.isfile(v):
-      return v
-
-    assert filename is not None, 'No valid configuration file found. Locations tried:\n'+'\n'.join(['  '+str(v) for v in files_attempted])
+# Conf.load()
+# print(Conf._conf)
+# Conf.save('configs/cfg.yaml')

@@ -5,8 +5,8 @@
 # @Site    : 
 # @File    : ModelWrapper.py
 # @Software: PyCharm
-
 import torch
+import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
 
@@ -18,8 +18,8 @@ import nn_models
 
 class ModelWrapper:
     def __init__(self, net_name='LeNet', dataset_name='cifar10'):
-        self.best_acc = 0  # best test accuracy
-        self.start_epoch = 0  # start from epoch 0 or last checkpoint epoch
+        self.best_acc = 0  
+        self.start_epoch = 0  
         # self.lr = cfg['train']['learning_rate']
         self.lr = Conf.get('train.learning_rate')
         self.l2 = Conf.get('train.l2')
@@ -76,10 +76,12 @@ class ModelWrapper:
         # data = dataset.__dict__[dataset_name]
         # self.train_loader = data.train_loader
         # self.test_loader = data.test_loader
-        self.train_loader, self.test_loader = load_data(dataset_name)
+        root_dir = Conf.get("data.root_dir")
+        print(root_dir, dataset_name)
+        self.train_loader, self.test_loader = load_data(dataset_name, root_dir)
         print('==> Building model..')
         # self.model = LeNet().to(self.device)
-        self.model = nn_models.__dict__[net]().to(self.device)
+        self.model = nn_models.__dict__[net](out_dim=100).to(self.device)
         if self.device == 'cuda':
             self.model = torch.nn.DataParallel(self.model)
             cudnn.benchmark = True
@@ -90,7 +92,22 @@ class ModelWrapper:
         self.model.load_state_dict(checkpoint['net'])
         self.best_acc = checkpoint['acc']
         self.start_epoch = checkpoint['epoch']
-
+        # for k,v in self.model.state_dict().items():
+        #     print(k, v.size())
+    
+    def _save(self, acc, epoch):
+        print('==> Saving the model..')
+        state = {
+            'net': self.model.state_dict(),
+            'acc': acc,
+            'epoch': self.start_epoch + epoch,
+        }
+        torch.save(state, self.pretrained_model)
+    
+    def _accuracy(self, outputs, labels):
+        vals, outs = torch.max(outputs, dim=1)
+        return torch.sum(outs == labels).item()
+    
     def verify(self, hook_fn=None):
         """
         测试数据模型检验
@@ -102,11 +119,11 @@ class ModelWrapper:
         correct_num = 0
         total = 0
         for batch_idx, (inputs, targets) in enumerate(self.test_loader):
-            img, label = inputs.to(self.device), targets.to(self.device)
-            outputs = self.model(img)
+            inputs, targets = inputs.to(self.device), targets.to(self.device)
+            outputs = self.model(inputs)
 
             for idx, all_output in enumerate(outputs):
-                if max(all_output) == all_output[label[idx]]:
+                if max(all_output) == all_output[targets[idx]]:
                     correct = True
                 else:
                     correct = False
@@ -114,7 +131,7 @@ class ModelWrapper:
                 bvsb = all_output[0] - all_output[1]
 
                 res = {
-                    "label": int(label[idx]),
+                    "label": int(targets[idx]),
                     "correct": correct,
                     "bvsb": float(bvsb)
                 }
@@ -174,15 +191,9 @@ class ModelWrapper:
             self._train_epoch(self.start_epoch + epoch)
             _, acc = self.verify()
             if acc > self.best_acc:
-                print('==> Saving the model..')
-                state = {
-                    'net': self.model.state_dict(),
-                    'acc': acc,
-                    'epoch': self.start_epoch + epoch,
-                }
-                torch.save(state, self.pretrained_model)
                 self.best_acc = acc
-
+                self._save(acc,epoch)
+                
     def _hook(self, module, grad_input, grad_output):
         pass
 
@@ -222,19 +233,28 @@ class ModelWrapper:
         return self.param_grad_list
 
     def weights_export(self, save_path='weights'):
-        import scipy.io as scio
-
         weights = {}
         for k, v in self.model.named_parameters():
             new_k = k.replace(".", "_")
             weights[new_k] = v.detach().numpy()
-        scio.savemat(save_path, weights)
+        return weights
 
-    def feature_map(self):
+    def feature_export(self):
         pass
 
+    def weight_inject(self, fault_model):
+        weight_list = list(self.model.named_parameters())
+        for k in weight_dict:
+            if "weight" in k[0] :
+                f = fault_model(k[1].data.cpu())
+                k[1].data = f.to(self.device)
+
+    # update
+    #Foward hooks, used to handle activation injections
     def register_hook(self, hook, module_ind):
         list(self.model.modules())[module_ind].register_forward_hook(hook)
+    def get_modules(self):
+        return self.model.modules()
 
     def summary(self):
         x = torch.zeros(10, 3, 32, 32).to(self.device)

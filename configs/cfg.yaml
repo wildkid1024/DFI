@@ -1,0 +1,18 @@
+data:
+  root_dir: /public3/DataSets/
+  train_num: 50000
+  val_num: 10000
+train:
+  batch_size: 32
+  epochs: 3
+  l2: 0.0
+  learning_rate: 0.01
+  resume: true
+val:
+  inject_times: 5
+  iteration_num: 10
+  pretrained_model:
+    CIFAR: ./nn_models/pretrained/lenet_cifar.pkl
+    FMIST: ./nn_models/pretrained/lenet_fashionmnist.pkl
+    MNIST: ./nn_models/pretrained/lenet_mnist.pkl
+    SVHN: ./nn_models/pretrained/lenet_svhn.pkl
