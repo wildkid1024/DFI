@@ -4,15 +4,16 @@ data:
   val_num: 10000
 train:
   batch_size: 32
-  epochs: 3
+  epochs: 10
   l2: 0.0
-  learning_rate: 0.01
+  learning_rate: 0.001
   resume: true
 val:
   inject_times: 5
   iteration_num: 10
   pretrained_model:
     CIFAR: ./nn_models/pretrained/lenet_cifar.pkl
+    CIFAR100: ./nn_models/pretrained/vgg16_cifar100.pkl
     FMIST: ./nn_models/pretrained/lenet_fashionmnist.pkl
     MNIST: ./nn_models/pretrained/lenet_mnist.pkl
     SVHN: ./nn_models/pretrained/lenet_svhn.pkl

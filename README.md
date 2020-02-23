@@ -22,6 +22,17 @@ Conf.load()
 net = ModelWrapper(net_name='ResNet18')
 net.train()
 ```
+Here is an example of weight error injection: 
+
+```python
+Conf.load(filename="configs/cfg.yaml")
+Conf.set("train.resume", True)
+net = ModelWrapper(net_name='VGG',dataset_name='cifar100')
+_, acc = net.verify()
+fault_model = RandomFault(frac=1e-4)
+net.weight_inject(fault_model)
+_, acc = net.verify()
+```
 
 There are some training parameters stored in configs directory. You can reconfigure them to get better results.
 

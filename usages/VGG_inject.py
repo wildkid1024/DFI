@@ -9,7 +9,7 @@ from libs.random_fault import *
 
 def train_test():
     Conf.load(filename="configs/cfg.yaml")
-    net = ModelWrapper(net_name='VGG')
+    net = ModelWrapper(net_name='VGG', dataset_name='cifar100')
     net.train()
     _, acc = net.verify()
     print(acc)
@@ -27,5 +27,5 @@ def vgg_inject():
     # print(res1 == res2)
 
 if __name__ == '__main__':
-    # train_test()
-    vgg_inject()
+    train_test()
+    # vgg_inject()

@@ -24,7 +24,7 @@ class ModelWrapper:
         self.lr = Conf.get('train.learning_rate')
         self.l2 = Conf.get('train.l2')
         
-        self.pretrained_model = Conf.get('val.pretrained_model.CIFAR')
+        self.pretrained_model = Conf.get('val.pretrained_model.CIFAR100')
         self.resume = Conf.get('train.resume')
         # self.pretrained_model = cfg['val']['pretrained_model']['CIFAR']
         # self.resume = cfg['train']['resume']
@@ -244,7 +244,7 @@ class ModelWrapper:
 
     def weight_inject(self, fault_model):
         weight_list = list(self.model.named_parameters())
-        for k in weight_dict:
+        for k in weight_list:
             if "weight" in k[0] :
                 f = fault_model(k[1].data.cpu())
                 k[1].data = f.to(self.device)
