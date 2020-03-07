@@ -17,10 +17,25 @@ def load_data(dataset_name, root_dir='./dataset/', batch_size=32, transform=torc
                     'FMNIST': datasets.FashionMNIST,
                     'MNIST': datasets.MNIST,
                     'SVHN': datasets.SVHN
+                    'IMAGENET':datasets.ImageNet
                     }
-    data_dir = root_dir + dataset_name
+    # data_dir = root_dir + dataset_name
+    data_dir = root_dir
 
-    if dataset_name == 'SVHN':
+    if dataset_name == 'IMAGENET':
+        traindir = os.path.join(data_dir, 'train')
+        testdir = os.path.join(data_dir, 'val')
+        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                        std=[0.229, 0.224, 0.225])
+        transformer = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            normalize,
+        ])
+        train_dataset = datasets.ImageFolder(traindir, transform=transformer)
+        test_dataset = datasets.ImageFolder(testdir, transform=transformer)
+    else if dataset_name == 'SVHN':
         train_dataset = dataset_dict[dataset_name](root=data_dir, split='train', transform=transform)
         test_dataset = dataset_dict[dataset_name](root=data_dir, split='test', transform=transform)
     else:
