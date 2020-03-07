@@ -242,17 +242,34 @@ class ModelWrapper:
     def feature_export(self):
         pass
 
+    def get_layers(self,):
+        weight_list = [[key, val] for key,val in self.model.named_parameters() if "weight" in key]
+        return weight_list
+
     def weight_inject(self, fault_model):
         weight_list = list(self.model.named_parameters())
         for k in weight_list:
             if "weight" in k[0] :
                 f = fault_model(k[1].data.cpu())
                 k[1].data = f.to(self.device)
-
+    
+    # layer_scale = [(2,6), (3,8), ... ,] len() 
+    def weight_quantize(self, layer_scale=None, qunatize_model):
+        weight_list = self.get_layers()
+        if layer_scale is None: 
+            layer_scale = [(32,32) for k in weight_list]
+        for layer_index, (qi, qf) in enumerate(layer_scale):
+            f = qunatize_model(data=weight_list[layer_index][1].cpu(),q=(qi,qf))
+            weight_list[layer_index][1].data = f.to(self.device) 
+    
     # update
     #Foward hooks, used to handle activation injections
     def register_hook(self, hook, module_ind):
         list(self.model.modules())[module_ind].register_forward_hook(hook)
+    
+    def register_backward_hook(self, hook_fn, module_ind):
+        list(self.model.modules())[module_ind].register_backward_hook(hook_fn)
+        
     def get_modules(self):
         return self.model.modules()
 
