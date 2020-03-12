@@ -5,8 +5,10 @@
 # @Site    : 
 # @File    : utils.py
 # @Software: PyCharm
+import os
 import torch
 import torchvision
+import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 from libs.config import Conf
 
@@ -16,11 +18,11 @@ def load_data(dataset_name, root_dir='./dataset/', batch_size=32, transform=torc
                     'CIFAR100':datasets.CIFAR100,
                     'FMNIST': datasets.FashionMNIST,
                     'MNIST': datasets.MNIST,
-                    'SVHN': datasets.SVHN
+                    'SVHN': datasets.SVHN,
                     'IMAGENET':datasets.ImageNet
                     }
-    # data_dir = root_dir + dataset_name
-    data_dir = root_dir
+    data_dir = root_dir + dataset_name
+    # data_dir = root_dir
 
     if dataset_name == 'IMAGENET':
         traindir = os.path.join(data_dir, 'train')
@@ -35,7 +37,8 @@ def load_data(dataset_name, root_dir='./dataset/', batch_size=32, transform=torc
         ])
         train_dataset = datasets.ImageFolder(traindir, transform=transformer)
         test_dataset = datasets.ImageFolder(testdir, transform=transformer)
-    else if dataset_name == 'SVHN':
+
+    elif dataset_name == 'SVHN':
         train_dataset = dataset_dict[dataset_name](root=data_dir, split='train', transform=transform)
         test_dataset = dataset_dict[dataset_name](root=data_dir, split='test', transform=transform)
     else:
