@@ -10,10 +10,12 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
 
+import torchvision.models as models
+
 from libs.net_measure import measure_model
 from libs.config import Conf
 from dataset.utils import load_data
-import nn_models
+from nn_models.utils import load_models
 
 
 class ModelWrapper:
@@ -24,7 +26,7 @@ class ModelWrapper:
         self.lr = Conf.get('train.learning_rate')
         self.l2 = Conf.get('train.l2')
         
-        self.pretrained_model = Conf.get('val.pretrained_model.CIFAR100')
+        # self.pretrained_model = Conf.get('val.pretrained_model.CIFAR100')
         self.resume = Conf.get('train.resume')
         # self.pretrained_model = cfg['val']['pretrained_model']['CIFAR']
         # self.resume = cfg['train']['resume']
@@ -81,9 +83,13 @@ class ModelWrapper:
         self.train_loader, self.test_loader = load_data(dataset_name, root_dir)
         print('==> Building model..')
         # self.model = LeNet().to(self.device)
-        self.model = nn_models.__dict__[net](out_dim=100).to(self.device)
+        self.model = load_models(dataset_name=dataset_name, model_name=net, num_classes=1000).to(self.device)
+        # self.model = nn_models.__dict__[net](out_dim=100).to(self.device)
         if self.device == 'cuda':
-            self.model = torch.nn.DataParallel(self.model)
+            if args.arch.startswith('alexnet') or args.arch.startswith('vgg'):
+                self.model.features = torch.nn.DataParallel(self.model.features)
+            else:
+                self.model = torch.nn.DataParallel(self.model)
             cudnn.benchmark = True
 
     def _resume(self):
@@ -254,7 +260,7 @@ class ModelWrapper:
                 k[1].data = f.to(self.device)
     
     # layer_scale = [(2,6), (3,8), ... ,] len() 
-    def weight_quantize(self, layer_scale=None, qunatize_model):
+    def weight_quantize(self, layer_scale, qunatize_model):
         weight_list = self.get_layers()
         if layer_scale is None: 
             layer_scale = [(32,32) for k in weight_list]

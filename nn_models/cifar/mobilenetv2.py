@@ -79,8 +79,5 @@ class MobileNetV2(nn.Module):
         return out
 
 
-def test():
-    net = MobileNetV2()
-    x = torch.randn(1, 3, 32, 32)
-    y = net(x)
-    print(y.size())
+def mobilenetv2(**kwargs):
+    return MobileNetV2(**kwargs)

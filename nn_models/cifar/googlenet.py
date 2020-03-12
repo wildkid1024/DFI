@@ -61,7 +61,7 @@ class Inception(nn.Module):
 
 
 class GoogLeNet(nn.Module):
-    def __init__(self, class_num=10):
+    def __init__(self, num_classes=10):
         super(GoogLeNet, self).__init__()
         self.pre_layers = nn.Sequential(
             nn.Conv2d(3, 192, kernel_size=3, padding=1),
@@ -105,8 +105,6 @@ class GoogLeNet(nn.Module):
         return out
 
 
-def test():
-    net = GoogLeNet()
-    x = torch.randn(1, 3, 32, 32)
-    y = net(x)
-    print(y.size())
+def googlenet(**kwargs):
+    return GoogLeNet(**kwargs)
+

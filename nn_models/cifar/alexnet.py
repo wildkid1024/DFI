@@ -47,3 +47,10 @@ class AlexNet(nn.Module):
         x = x.view(x.size(0), 256 * 2 * 2)
         x = self.classifier(x)
         return x
+
+def alexnet(**kwargs):
+    r"""AlexNet model architecture from the
+    `"One weird trick..." <https://arxiv.org/abs/1404.5997>`_ paper.
+    """
+    model = AlexNet(**kwargs)
+    return model

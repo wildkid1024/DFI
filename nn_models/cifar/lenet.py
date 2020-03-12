@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class LeNet(nn.Module):
-    def __init__(self, input_feature=[3, 32, 32], output_class=10):
+    def __init__(self, input_feature=[3, 32, 32], num_classes=10):
         super(LeNet, self).__init__()
         self.conv1 = nn.Conv2d(input_feature[0], 6, 5)
         self.conv2 = nn.Conv2d(6, 16, 5)
@@ -22,3 +22,7 @@ class LeNet(nn.Module):
         out = F.relu(self.fc2(out))
         out = F.softmax(self.fc3(out), dim=1)
         return out
+
+
+def lenet(**kwargs):
+    return LeNet(**kwargs)
