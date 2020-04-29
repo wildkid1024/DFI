@@ -7,12 +7,19 @@
 # @Software: PyCharm
 
 import torch.nn as nn
+import torch.nn.functional as F
 
 '''
 modified to fit dataset size
 '''
 NUM_CLASSES = 10
 
+import torch.nn as nn
+
+'''
+modified to fit dataset size
+'''
+NUM_CLASSES = 10
 
 class AlexNet(nn.Module):
     def __init__(self, num_classes=NUM_CLASSES):
@@ -33,10 +40,10 @@ class AlexNet(nn.Module):
             nn.MaxPool2d(kernel_size=2),
         )
         self.classifier = nn.Sequential(
-            nn.Dropout(),
+            nn.Dropout(0.5),
             nn.Linear(256 * 2 * 2, 4096),
             nn.ReLU(inplace=True),
-            nn.Dropout(),
+            nn.Dropout(0.5),
             nn.Linear(4096, 4096),
             nn.ReLU(inplace=True),
             nn.Linear(4096, num_classes),
@@ -45,7 +52,9 @@ class AlexNet(nn.Module):
     def forward(self, x):
         x = self.features(x)
         x = x.view(x.size(0), 256 * 2 * 2)
+        # print("前面一层", x)
         x = self.classifier(x)
+        # print(x)
         return x
 
 def alexnet(**kwargs):

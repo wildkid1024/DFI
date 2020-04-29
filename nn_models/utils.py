@@ -10,6 +10,8 @@ def load_models(dataset_name='cifar10', model_name='alexnet', **kwargs):
         model_names = sorted(name for name in models.__dict__
             if name.islower() and not name.startswith("__")
             and callable(models.__dict__[name]))
+        
+        return cifar_models.__dict__[model_name.lower()](**kwargs)
 
     elif dataset_name.startswith('imagenet'):
         import torchvision.models as models
