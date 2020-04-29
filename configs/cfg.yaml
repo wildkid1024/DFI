@@ -12,7 +12,7 @@ val:
   inject_times: 5
   iteration_num: 10
   pretrained_model:
-    CIFAR: ./nn_models/pretrained/lenet_cifar.pkl
+    CIFAR10: ./nn_models/pretrained/lenet_cifar.pkl
     CIFAR100: ./nn_models/pretrained/vgg16_cifar100.pkl
     FMIST: ./nn_models/pretrained/lenet_fashionmnist.pkl
     MNIST: ./nn_models/pretrained/lenet_mnist.pkl
