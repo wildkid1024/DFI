@@ -42,6 +42,7 @@ class ModelWrapper:
         self.resume = Conf.get('train.resume')
     
         self.quantization_aware_training = False
+        self.finetune_func = None
 
         # val
         self.iteration_num = Conf.get('val.iters')
@@ -114,9 +115,7 @@ class ModelWrapper:
         self.model.load_state_dict(checkpoint['net'])
         self.best_acc = checkpoint['acc']
         self.start_epoch = checkpoint['epoch']
-        # for k,v in self.model.state_dict().items():
-        #     print(k, v.size())
-    
+
     def _save(self, acc, epoch):
         print('==> Saving the model..')
         state = {
@@ -148,80 +147,88 @@ class ModelWrapper:
         total = 0
         end = time.time()
         bar = Bar('valid:', max=len(self.test_loader))
-        for batch_idx, (inputs, targets) in enumerate(self.test_loader):
-            data_time.update(time.time() - end)
-            inputs, targets = inputs.to(self.device), targets.to(self.device)
-            outputs = self.model(inputs)
-            # prsint(outputs)
-            """
-            for idx, all_output in enumerate(outputs):
-                if max(all_output) == all_output[targets[idx]]:
-                    correct = True
-                else:
-                    correct = False
-                all_output = sorted(all_output, reverse=True)
-                bvsb = all_output[0] - all_output[1]
+        with torch.no_grad():
+            for batch_idx, (inputs, targets) in enumerate(self.test_loader):
+                data_time.update(time.time() - end)
+                inputs, targets = inputs.to(self.device), targets.to(self.device)
+                outputs = self.model(inputs)
+                # prsint(outputs)
+                """
+                for idx, all_output in enumerate(outputs):
+                    if max(all_output) == all_output[targets[idx]]:
+                        correct = True
+                    else:
+                        correct = False
+                    all_output = sorted(all_output, reverse=True)
+                    bvsb = all_output[0] - all_output[1]
 
-                res = {
-                    "label": int(targets[idx]),
-                    "correct": correct,
-                    "bvsb": float(bvsb)
-                }
+                    res = {
+                        "label": int(targets[idx]),
+                        "correct": correct,
+                        "bvsb": float(bvsb)
+                    }
 
-                results.append(res)
-            """
-            self.optimizer.zero_grad()
-            loss = self.criterion(outputs, targets)
-            prec1, prec5 = accuracy(outputs.data, targets, topk=(1, 5))
+                    results.append(res)
+                """
+                self.optimizer.zero_grad()
+                loss = self.criterion(outputs, targets)
+                prec1, prec5 = accuracy(outputs.data, targets, topk=(1, 5))
 
-            if self.injection_gate:
-                batch_size = targets.size(0)
-                accs, prec = outputs.topk(2, 1, True, True)
-                # mask_mul = torch.ones_like(accs)
-                # mask_mul[:,-1] = -1
-                bvsb = accs[:, 0] - accs[:, 1]
+                if self.injection_gate:
+                    batch_size = targets.size(0)
+                    accs, prec = outputs.topk(2, 1, True, True)
+                    # TODO: 求解bvsb
+                    # pred = outputs.t()
+                    # correct = pred.eq(target.view(1, -1).expand_as(pred))
+                    # mask_mul = torch.ones_like(accs)
+                    # mask_mul[:,-1] = -1
+                    bvsb = accs[:, 0] - accs[:, 1]
+                    results_bvsb.append(bvsb) 
                 results_bvsb.append(bvsb) 
+                    results_bvsb.append(bvsb) 
 
-            # _, predicted = outputs.max(1)
-            # total += targets.size(0)
-            # correct_num += predicted.eq(targets).sum().item()
+                # _, predicted = outputs.max(1)
+                # total += targets.size(0)
+                # correct_num += predicted.eq(targets).sum().item()
 
-            losses.update(loss.item(), inputs.size(0))
-            top1.update(prec1.item(), inputs.size(0))
+                losses.update(loss.item(), inputs.size(0))
+                top1.update(prec1.item(), inputs.size(0))
 
-            batch_time.update(time.time() - end)
-            end = time.time()
+                batch_time.update(time.time() - end)
+                end = time.time()
 
-            if hook_fn:
-                hook_fn(loss)
+                if hook_fn:
+                    hook_fn(loss)
 
-            if batch_idx % 1 == 0:
-                bar.suffix = \
-                    '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | ' \
-                    'Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
-                        batch=batch_idx + 1,
-                        size=len(self.test_loader),
-                        data=data_time.avg,
-                        bt=batch_time.avg,
-                        total=bar.elapsed_td,
-                        eta=bar.eta_td,
-                        loss=losses.avg,
-                        top1=top1.avg,
-                        top5=0,
-                        # top5=top5.avg,
-                    )
-                bar.next()
-
-            if self.injection_gate and batch_idx >= self.iteration_num - 1:
-                print('Verify Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                      % (losses.avg, 100. * correct_num / total, correct_num, total))
-                return results_bvsb, top1.avg
+                if batch_idx % 1 == 0:
+                    bar.suffix = \
+                        '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | ' \
+                        'Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
+                            batch=batch_idx + 1,
+                            size=len(self.test_loader),
+                            data=data_time.avg,
+                            bt=batch_time.avg,
+                            total=bar.elapsed_td,
+                            eta=bar.eta_td,
+                            loss=losses.avg,
+                            top1=top1.avg,
+                            top5=0,
+                            # top5=top5.avg,
+                        )
+                    bar.next()
+                
+                if self.injection_gate and batch_idx >= self.iteration_num - 1:
+                    print("\nVerify Loss: %.3f | Acc: %.3f%%"
+                        % (losses.avg, top1.avg))
+                    torch.cuda.empty_cache()
+                    return results_bvsb, top1.avg
         
         bar.finish()
-
+        
+        del bar
         return top1.avg
 
-    def _adjust_lr(self, epoch, optimizer):
+    def _adjust_lr(self, epoch):
         lr = self.lr * (0.1 ** (epoch // 10))
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = lr
@@ -231,11 +238,6 @@ class ModelWrapper:
             param_group['lr'] *= self.finetune_gamma
 
     def _train_epoch(self, epoch):
-        # print('\n==> Epoch: %d' % epoch)
-        # model = cifar_models.alexnet().cuda()
-        # criterion = nn.CrossEntropyLoss()
-        # optimizer = optim.Adadelta(model.parameters())
-        
         data_time = AverageMeter()
         batch_time = AverageMeter()
         losses = AverageMeter()
@@ -248,7 +250,7 @@ class ModelWrapper:
         total = 0
         log_batch = 10
         end = time.time()
-        bar = Bar('Train:', max=len(self.train_loader))
+        bar = Bar('Train Epoch ' + str(epoch) + ':', max=len(self.train_loader))
         for batch_idx, (inputs, targets) in enumerate(self.train_loader):
             data_time.update(time.time() - end)
             inputs, targets = inputs.to(self.device), targets.to(self.device)
@@ -271,6 +273,9 @@ class ModelWrapper:
 
             if self.quantization_aware_training:
                 self.quantizer.kmeans_update_model(self.model)
+
+            if  self.finetune_func:   
+                self.finetune_func(self.model)
             
             batch_time.update(time.time() - end)
             end = time.time()
@@ -288,7 +293,6 @@ class ModelWrapper:
                         loss=losses.avg,
                         top1=top1.avg,
                         top5=top5.avg,
-                        # top5=top5.avg,
                     )
                 bar.next(1)
             
@@ -296,17 +300,17 @@ class ModelWrapper:
                     #   % (epoch, batch_idx, train_loss / (batch_idx + 1), 100. * correct / total, correct, total))
         bar.finish()
 
-    def train(self, epoches=-1):
+    def train(self, epoches=-1, save_best=True):
         if epoches>0: 
             self.epoches = epoches
             self.best_acc = 0
         for epoch in range(self.epoches):
-            self._adjust_lr(epoch, self.optimizer)
+            self._adjust_lr(epoch)
             self._train_epoch(self.start_epoch + epoch)
             acc = self.verify()
             if acc > self.best_acc:
                 self.best_acc = acc
-                self._save(acc,epoch)
+                if save_best: self._save(acc,epoch)
         return self.best_acc
                 
     def param_grad(self, method='mean'):
@@ -371,10 +375,10 @@ class ModelWrapper:
         weight_list = list(self.model.named_parameters())
         for k in weight_list:
             if "weight" in k[0] :
-                f = fault_model(k[1].data.cpu())
-                k[1].data = f.to(self.device)
+                f, masks = fault_model(k[1].data.cpu())
+                k[1].data = k[1].data.mul(masks.float().cuda())
         print("==>inject finished")
-        
+
     # layer_scale = [(2,6), (3,8), ... ,] len() 
     def weight_quantize(self, qunatize_model, layer_scale):
         print("==> weights quantize...")

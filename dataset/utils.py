@@ -13,6 +13,7 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 from torch.utils.data.sampler import SubsetRandomSampler
 from libs.config import Conf
+from dataset.gtrsb_db import GTSRB
 
 def load_data(dataset_name, root_dir='./dataset/', n_worker=0, batch_size=4096, transform=transforms.ToTensor()):
     dataset_dict = {'CIFAR10': datasets.CIFAR10,
@@ -42,6 +43,24 @@ def load_data(dataset_name, root_dir='./dataset/', n_worker=0, batch_size=4096, 
     elif dataset_name.upper() == 'SVHN':
         train_dataset = dataset_dict[dataset_name](root=data_dir, split='train', transform=transform)
         test_dataset = dataset_dict[dataset_name](root=data_dir, split='test', transform=transform)
+    elif dataset_name.upper() == 'GTSRB':
+        traindir = os.path.join(data_dir, 'GTSRB/Final_Training/Images/')
+        valdir = os.path.join(data_dir, 'GTSRB/Final_Test/')
+        transform = transforms.Compose([
+            transforms.Scale(48),
+            transforms.CenterCrop((48, 48)),
+            transforms.ToTensor()
+        ])
+        train_dataset = GTSRB(
+            root=traindir,
+            train=True, 
+            transform=transform 
+        )
+        test_dataset = GTSRB(
+            root=valdir,
+            train=False, 
+            transform=transform 
+        )
     else:
         dataset_name = dataset_name.upper()
         transform_train = transforms.Compose([
